@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 VERSION=$(tr -d '[:space:]' < VERSION)
 swift build -c release
-APP="build/ePerformance View.app"
+APP="build.noindex/ePerformance View.app"   # ".noindex": Spotlight and Launchpad skip it, so only the installed copy shows
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/ePerformanceView "$APP/Contents/MacOS/ePerformanceView"

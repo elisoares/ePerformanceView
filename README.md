@@ -59,7 +59,7 @@ Cerca de 2–3% de CPU e ~100 MB de memória. O teste de velocidade (o `networkQ
 ./build.sh
 ```
 
-Gera `build/ePerformance View.app`. Precisa das ferramentas de linha de comando do Xcode (Swift 5.9+).
+Gera `build.noindex/ePerformance View.app` (pasta ignorada pelo Spotlight e pelo Launchpad). Precisa das ferramentas de linha de comando do Xcode (Swift 5.9+).
 
 ## Publicar uma versão nova
 

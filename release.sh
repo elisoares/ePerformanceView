@@ -10,7 +10,7 @@ if gh release view "v$VERSION" >/dev/null 2>&1; then
   exit 1
 fi
 ./build.sh
-ZIP="build/ePerformanceView.zip"   # stable name, so .../releases/latest/download/ePerformanceView.zip always works
+ZIP="build.noindex/ePerformanceView.zip"   # stable name, so .../releases/latest/download/ePerformanceView.zip always works
 rm -f "$ZIP"
-/usr/bin/ditto -c -k --keepParent "build/ePerformance View.app" "$ZIP"
+/usr/bin/ditto -c -k --keepParent "build.noindex/ePerformance View.app" "$ZIP"
 gh release create "v$VERSION" "$ZIP" --title "ePerformance View $VERSION" --notes "$NOTES"
