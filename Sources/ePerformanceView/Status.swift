@@ -24,6 +24,12 @@ enum Level: Int, Comparable {
         return .ok
     }
 
+    /// Hottest CPU core: Apple Silicon runs fine into the 80s and starts throttling around 90-100 °C.
+    static func temperature(_ celsius: Double?) -> Level {
+        guard let t = celsius else { return .ok }
+        return t >= 90 ? .critical : t >= 70 ? .warn : .ok
+    }
+
     var nsColor: NSColor {
         switch self {
         case .ok: return .systemGreen
@@ -36,11 +42,44 @@ enum Level: Int, Comparable {
 }
 
 /// One gauge: a ring filled to `value` (0...100), colored by `level`, with a symbol inside.
+/// A `heat` gauge is painted cold-to-hot along the arc instead of with one level color.
 struct Gauge {
     let symbol: String
     let value: Double?          // nil = not available (no fan)
     let level: Level
     let text: String
+    var heat = false
+}
+
+/// Cold-to-hot scale for temperatures: the ring spans 30-100 °C and changes color at each band.
+enum Heat {
+    static let floor = 30.0, ceiling = 100.0
+    /// Upper bound of each band and its color, coldest first.
+    static let bands: [(upTo: Double, name: String, color: NSColor)] = [
+        (45, "fria", .systemBlue),
+        (70, "normal", .systemGreen),
+        (90, "morna", .systemYellow),
+        (.infinity, "quente", .systemRed),
+    ]
+
+    /// Position of a temperature on the ring, 0...1.
+    static func fraction(_ celsius: Double) -> Double { max(0, min(1, (celsius - floor) / (ceiling - floor))) }
+    static func band(_ celsius: Double) -> (upTo: Double, name: String, color: NSColor) {
+        bands.first { celsius < $0.upTo } ?? bands[bands.count - 1]
+    }
+
+    /// The filled part of the ring split into colored pieces, as (from, to) fractions.
+    static func segments(upTo celsius: Double) -> [(from: Double, to: Double, color: NSColor)] {
+        let end = max(0.04, fraction(celsius))
+        var start = 0.0, result: [(Double, Double, NSColor)] = []
+        for band in bands {
+            let stop = min(end, band.upTo.isFinite ? fraction(band.upTo) : 1)
+            if stop > start { result.append((start, stop, band.color)) }
+            start = stop
+            if start >= end { break }
+        }
+        return result
+    }
 }
 
 extension SystemSnapshot {
@@ -81,7 +120,7 @@ enum MenuBarImage {
             var x: CGFloat = 0
             for (i, g) in gauges.enumerated() {
                 let center = NSPoint(x: x + ring / 2, y: height / 2)
-                drawRing(at: center, value: g.value, color: g.level.nsColor)
+                drawRing(at: center, value: g.value, color: g.level.nsColor, heat: g.heat)
                 drawSymbol(g.symbol, at: center)
                 let text = g.text as NSString
                 let size = text.size(withAttributes: attrs)
@@ -155,7 +194,7 @@ enum MenuBarImage {
         img.draw(in: NSRect(x: center.x - s.width / 2, y: center.y - s.height / 2, width: s.width, height: s.height))
     }
 
-    private static func drawRing(at center: NSPoint, value: Double?, color: NSColor) {
+    private static func drawRing(at center: NSPoint, value: Double?, color: NSColor, heat: Bool = false) {
         let radius = ring / 2 - 1.3
         let track = NSBezierPath()
         track.appendArc(withCenter: center, radius: radius, startAngle: 0, endAngle: 360)
@@ -164,6 +203,17 @@ enum MenuBarImage {
         track.stroke()
         guard let value else { return }
 
+        if heat {
+            for piece in Heat.segments(upTo: value) {
+                let arc = NSBezierPath()
+                arc.appendArc(withCenter: center, radius: radius, startAngle: 90 - 360 * piece.from,
+                              endAngle: 90 - 360 * piece.to, clockwise: true)
+                arc.lineWidth = 2.2
+                piece.color.setStroke()
+                arc.stroke()
+            }
+            return
+        }
         let fraction = max(0.04, min(1, value / 100))
         let arc = NSBezierPath()
         arc.appendArc(withCenter: center, radius: radius, startAngle: 90, endAngle: 90 - 360 * fraction, clockwise: true)
@@ -175,13 +225,15 @@ enum MenuBarImage {
 }
 
 extension Monitor {
-    /// Fan, CPU and memory, in that order, shared by the menu bar and the widget.
+    /// Fan, temperature, CPU and memory, in that order, for the menu bar.
     var gauges: [Gauge] {
         let s = snapshot
         let fan = s.fanFraction
         return [
             Gauge(symbol: "fan.fill", value: fan.map { $0 * 100 }, level: .fan(fan),
                   text: fan.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"),
+            Gauge(symbol: "thermometer.medium", value: s.temperatures.cpu, level: .temperature(s.temperatures.cpu),
+                  text: s.temperatures.cpu.map { "\(Int($0.rounded()))°" } ?? "—", heat: true),
             Gauge(symbol: "cpu", value: s.cpuTotal, level: .cpu(s.cpuTotal), text: "\(Int(s.cpuTotal.rounded()))%"),
             Gauge(symbol: "memorychip", value: memoryPercent, level: memoryLevel, text: "\(Int(memoryPercent.rounded()))%"),
         ]

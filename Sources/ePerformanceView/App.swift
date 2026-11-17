@@ -90,7 +90,29 @@ struct PanelView: View {
                 StatRow(icon: "cpu.fill", title: "GPU", value: "\(Int(gpu.rounded()))%", fraction: gpu / 100,
                         detail: s.gpuCores.map { "\($0) núcleos" } ?? "", tint: Level.cpu(gpu).color)
             }
+            temperatureRow(s.temperatures)
             fanRow(s)
+        }
+    }
+
+    /// Hottest CPU core with its cold-to-hot band, then the other areas.
+    @ViewBuilder private func temperatureRow(_ t: SMC.Temperatures) -> some View {
+        if let cpu = t.cpu {
+            let band = Heat.band(cpu)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Label("Temperatura", systemImage: "thermometer.medium").frame(width: 92, alignment: .leading)
+                    Text("CPU \(Int(cpu.rounded())) °C").monospacedDigit().foregroundStyle(Color(nsColor: band.color))
+                    Spacer()
+                    Text(band.name).font(.caption).foregroundStyle(.secondary)
+                }
+                let others: [(String, Double?)] = [("GPU", t.gpu), ("SSD", t.ssd), ("bateria", t.battery)]
+                Text(others.compactMap { name, v in v.map { "\(name) \(Int($0.rounded())) °C" } }.joined(separator: " · "))
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                    .padding(.leading, 92)
+            }
+            .font(.callout)
+            .help("Núcleo mais quente da CPU. Azul até 45 °C, verde até 70 °C, amarelo até 90 °C, vermelho acima.")
         }
     }
 

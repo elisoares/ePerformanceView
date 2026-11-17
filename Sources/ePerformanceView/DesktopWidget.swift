@@ -53,6 +53,7 @@ enum MatrixTheme {
     static let bright = Color(red: 0.71, green: 1, blue: 0.78)         // #B6FFC8
     static let warn = Color(red: 0.83, green: 1, blue: 0.23)           // #D4FF3A
     static let critical = Color(red: 1, green: 0.23, blue: 0.23)       // #FF3B3B
+    static let cold = Color(red: 0.24, green: 0.72, blue: 1)            // #3DB8FF
 
     static func color(_ level: Level) -> Color {
         switch level {
@@ -77,16 +78,16 @@ struct MatrixWidgetView: View {
             // Transparent: the desktop shows through. A near-invisible fill keeps the whole area draggable.
             RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.black.opacity(0.001))
             HStack(spacing: 0) {
-                gauges(s).frame(width: 226)
+                gauges(s).frame(width: 254)
                 divider
-                cores(s).padding(.horizontal, 10).frame(width: 150)
+                cores(s).padding(.horizontal, 8).frame(width: 130)
                 divider
                 network(s).padding(.horizontal, 10).frame(width: 198)
                 divider
                 statusPanel(s).padding(.leading, 12).frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.vertical, 12)
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 6)
             // Dark halo keeps the green readable over any wallpaper.
             .compositingGroup()
             .shadow(color: .black.opacity(0.85), radius: 1.5)
@@ -113,6 +114,12 @@ struct MatrixWidgetView: View {
                             : zip(["L", "R"], s.fans).map { "\($0): \(Int($1.rpm)) rpm" }.joined(separator: " · ")) {
                 FanSplitRing(fans: s.fans)
             }
+            gaugeColumn(title: "temp", detail: s.temperatures.gpu.map { "gpu \(Int($0.rounded()))°" } ?? "—",
+                        help: temperatureHelp(s.temperatures)) {
+                MatrixHeatRing(celsius: s.temperatures.cpu, lineWidth: 5, radius: 21)
+                    .overlay(Text(s.temperatures.cpu.map { "\(Int($0.rounded()))°" } ?? "—")
+                        .font(MatrixTheme.font(13)).foregroundStyle(MatrixTheme.bright))
+            }
             gaugeColumn(title: "cpu", detail: "\(s.cores.count) núc") {
                 percentRing(s.cpuTotal, level: .cpu(s.cpuTotal))
             }
@@ -126,8 +133,13 @@ struct MatrixWidgetView: View {
     }
 
     private func percentRing(_ value: Double, level: Level) -> some View {
-        MatrixRing(fraction: value / 100, lineWidth: 5, color: MatrixTheme.color(level), radius: 23)
+        MatrixRing(fraction: value / 100, lineWidth: 5, color: MatrixTheme.color(level), radius: 21)
             .overlay(Text("\(Int(value.rounded()))%").font(MatrixTheme.font(13)).foregroundStyle(MatrixTheme.bright))
+    }
+
+    private func temperatureHelp(_ t: SMC.Temperatures) -> String {
+        let parts: [(String, Double?)] = [("CPU", t.cpu), ("GPU", t.gpu), ("SSD", t.ssd), ("bateria", t.battery)]
+        return parts.compactMap { name, v in v.map { "\(name) \(Int($0.rounded())) °C" } }.joined(separator: " · ")
     }
 
     private func gb(_ bytes: UInt64) -> String {
@@ -138,7 +150,7 @@ struct MatrixWidgetView: View {
     private func gaugeColumn<G: View>(title: String, detail: String, help: String? = nil,
                                       @ViewBuilder gauge: () -> G) -> some View {
         VStack(spacing: 3) {
-            gauge().frame(width: 54, height: 54)
+            gauge().frame(width: 50, height: 50)
             Text(title).font(MatrixTheme.font(11))
             Text(detail).font(MatrixTheme.font(10)).foregroundStyle(MatrixTheme.dim).lineLimit(1)
         }
@@ -167,7 +179,8 @@ struct MatrixWidgetView: View {
                 Spacer()
                 Text("w \(Fmt.short(s.diskWriteRate))")
             }
-            .font(MatrixTheme.font(11))
+            .font(MatrixTheme.font(10))
+            .lineLimit(1)
         }
     }
 
@@ -289,6 +302,30 @@ struct MatrixRing: View {
                 .trim(from: 0, to: max(0.02, min(1, fraction)))
                 .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
+        }
+        .frame(width: radius * 2, height: radius * 2)
+    }
+}
+
+/// Temperature ring: the filled arc is painted cold (blue) to hot (red) along the way, like the menu bar gauge.
+struct MatrixHeatRing: View {
+    let celsius: Double?
+    let lineWidth: CGFloat
+    let radius: CGFloat
+
+    private static let colors = [MatrixTheme.cold, MatrixTheme.green, MatrixTheme.warn, MatrixTheme.critical]
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(MatrixTheme.green.opacity(0.15), lineWidth: lineWidth)
+            if let celsius {
+                ForEach(Array(Heat.segments(upTo: celsius).enumerated()), id: \.offset) { i, piece in
+                    Circle()
+                        .trim(from: piece.from, to: piece.to)
+                        .stroke(Self.colors[min(i, Self.colors.count - 1)], style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
+                        .rotationEffect(.degrees(-90))
+                }
+            }
         }
         .frame(width: radius * 2, height: radius * 2)
     }

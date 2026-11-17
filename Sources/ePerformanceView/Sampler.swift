@@ -49,6 +49,7 @@ struct SystemSnapshot {
     var diskWriteRate: Double = 0
     var diskFree: Int64 = 0
     var fans: [SMC.Fan] = []
+    var temperatures = SMC.Temperatures()
     var thermal: ProcessInfo.ThermalState = .nominal
     var groups: [ProcessGroup] = []
     /// Load of each logical core, 0...100, in macOS order (efficiency cores first on Apple silicon).
@@ -118,6 +119,7 @@ final class Sampler: @unchecked Sendable { // only touched from the serial sampl
         (s.diskReadRate, s.diskWriteRate) = diskRates(now: now)
         s.diskFree = (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?.volumeAvailableCapacityForImportantUsage ?? 0
         s.fans = smc?.fans() ?? []
+        s.temperatures = smc?.temperatures() ?? SMC.Temperatures()
         s.thermal = ProcessInfo.processInfo.thermalState
         s.groups = groups(interval: interval, now: now)
         return s

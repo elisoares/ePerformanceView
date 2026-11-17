@@ -2,7 +2,7 @@
 
 # ePerformance View
 
-App leve para macOS que mostra, de forma simples, **quem está usando CPU, memória, disco e rede**, o que está **ligando a ventoinha** e a **velocidade da internet**, direto na barra de menus e num widget na área de trabalho.
+App leve para macOS que mostra, de forma simples, **quem está usando CPU, memória, disco e rede**, a **temperatura**, o que está **ligando a ventoinha** e a **velocidade da internet**, direto na barra de menus e num widget na área de trabalho.
 
 Também identifica apps parados que podem ser fechados para liberar memória e diz qual app está por trás de processos com nome técnico (ex.: "com.apple.Virtualization.VirtualMachine" → Docker/Colima).
 
@@ -11,13 +11,14 @@ Também identifica apps parados que podem ser fechados para liberar memória e d
 ![barra de menus, tema escuro](docs/menubar-dark.png)
 ![barra de menus, tema claro](docs/menubar-light.png)
 
-Ventoinha, CPU e memória com anéis verde/amarelo/vermelho. Ao lado, a internet: **↓ download** e **↑ upload** agora (Mbps) e, à direita, a velocidade do último teste. O círculo com número aparece quando há app sugerido para fechar.
+Ventoinha, CPU e memória com anéis verde/amarelo/vermelho, e a temperatura num anel de frio a calor (azul → verde → amarelo → vermelho). Ao lado, a internet: **↓ download** e **↑ upload** agora (Mbps) e, à direita, a velocidade do último teste. O círculo com número aparece quando há app sugerido para fechar.
 
 ## Widget na área de trabalho
 
 ![widget na área de trabalho](docs/widget.png)
 
 - **fans**: as duas ventoinhas (L e R) num anel dividido
+- **temp**: núcleo mais quente da CPU, de frio a calor, e a GPU embaixo
 - **cpu / gpu / mem**: uso atual
 - **núcleos**: cada núcleo de performance e de eficiência, e o disco (leitura e escrita)
 - **net**: velocímetro de Mbps agora e o resultado do último teste (↓ / ↑)
