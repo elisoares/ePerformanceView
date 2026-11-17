@@ -83,7 +83,7 @@ final class SMC {
         var fraction: Double { max > 0 ? Swift.max(0, Swift.min(1, rpm / max)) : 0 }
     }
 
-    /// Hottest reading per area, in °C; nil when this Mac exposes no sensor for it.
+    /// Per area, the mean of its 3 hottest sensors in °C; nil when this Mac exposes no sensor for it.
     struct Temperatures: Equatable {
         var cpu: Double?
         var gpu: Double?
@@ -121,7 +121,9 @@ final class SMC {
         for (area, keys) in fullScan ? temperatureKeys : hotKeys {
             // Unused sensors read 0 or nonsense; keep plausible die/board values only.
             let readings = keys.compactMap { key in number(key).map { (key, $0) } }.filter { $0.1 > 5 && $0.1 < 130 }
-            t[keyPath: area] = readings.map(\.1).max()
+            // Mean of the 3 hottest sensors: one core can spike for a split second, which says little.
+            let hottest = readings.map(\.1).sorted(by: >).prefix(3)
+            t[keyPath: area] = hottest.isEmpty ? nil : hottest.reduce(0, +) / Double(hottest.count)
             if fullScan {
                 hotKeys[area] = readings.sorted { $0.1 > $1.1 }.prefix(Self.hotKeysPerArea).map(\.0)
             }

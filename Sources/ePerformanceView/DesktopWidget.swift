@@ -307,7 +307,7 @@ struct MatrixRing: View {
     }
 }
 
-/// Temperature ring: the filled arc is painted cold (blue) to hot (red) along the way, like the menu bar gauge.
+/// Temperature ring in one color, the current cold-to-hot band, like the menu bar gauge.
 struct MatrixHeatRing: View {
     let celsius: Double?
     let lineWidth: CGFloat
@@ -316,18 +316,9 @@ struct MatrixHeatRing: View {
     private static let colors = [MatrixTheme.cold, MatrixTheme.green, MatrixTheme.warn, MatrixTheme.critical]
 
     var body: some View {
-        ZStack {
-            Circle().stroke(MatrixTheme.green.opacity(0.15), lineWidth: lineWidth)
-            if let celsius {
-                ForEach(Array(Heat.segments(upTo: celsius).enumerated()), id: \.offset) { i, piece in
-                    Circle()
-                        .trim(from: piece.from, to: piece.to)
-                        .stroke(Self.colors[min(i, Self.colors.count - 1)], style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
-                        .rotationEffect(.degrees(-90))
-                }
-            }
-        }
-        .frame(width: radius * 2, height: radius * 2)
+        MatrixRing(fraction: celsius.map(Heat.fraction) ?? 0, lineWidth: lineWidth,
+                   color: celsius.map { t in Self.colors[Heat.bands.firstIndex { t < $0.upTo } ?? Self.colors.count - 1] } ?? .clear,
+                   radius: radius)
     }
 }
 

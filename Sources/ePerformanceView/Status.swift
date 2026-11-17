@@ -42,7 +42,7 @@ enum Level: Int, Comparable {
 }
 
 /// One gauge: a ring filled to `value` (0...100), colored by `level`, with a symbol inside.
-/// A `heat` gauge is painted cold-to-hot along the arc instead of with one level color.
+/// A `heat` gauge takes the color of its cold-to-hot band (blue, green, yellow, red).
 struct Gauge {
     let symbol: String
     let value: Double?          // nil = not available (no fan)
@@ -51,7 +51,7 @@ struct Gauge {
     var heat = false
 }
 
-/// Cold-to-hot scale for temperatures: the ring spans 30-100 °C and changes color at each band.
+/// Cold-to-hot scale for temperatures: the ring spans 30-100 °C and its color is the current band.
 enum Heat {
     static let floor = 30.0, ceiling = 100.0
     /// Upper bound of each band and its color, coldest first.
@@ -66,19 +66,6 @@ enum Heat {
     static func fraction(_ celsius: Double) -> Double { max(0, min(1, (celsius - floor) / (ceiling - floor))) }
     static func band(_ celsius: Double) -> (upTo: Double, name: String, color: NSColor) {
         bands.first { celsius < $0.upTo } ?? bands[bands.count - 1]
-    }
-
-    /// The filled part of the ring split into colored pieces, as (from, to) fractions.
-    static func segments(upTo celsius: Double) -> [(from: Double, to: Double, color: NSColor)] {
-        let end = max(0.04, fraction(celsius))
-        var start = 0.0, result: [(Double, Double, NSColor)] = []
-        for band in bands {
-            let stop = min(end, band.upTo.isFinite ? fraction(band.upTo) : 1)
-            if stop > start { result.append((start, stop, band.color)) }
-            start = stop
-            if start >= end { break }
-        }
-        return result
     }
 }
 
@@ -204,14 +191,14 @@ enum MenuBarImage {
         guard let value else { return }
 
         if heat {
-            for piece in Heat.segments(upTo: value) {
-                let arc = NSBezierPath()
-                arc.appendArc(withCenter: center, radius: radius, startAngle: 90 - 360 * piece.from,
-                              endAngle: 90 - 360 * piece.to, clockwise: true)
-                arc.lineWidth = 2.2
-                piece.color.setStroke()
-                arc.stroke()
-            }
+            // One color for the whole arc, the band the temperature is in now.
+            let arc = NSBezierPath()
+            arc.appendArc(withCenter: center, radius: radius, startAngle: 90,
+                          endAngle: 90 - 360 * max(0.04, Heat.fraction(value)), clockwise: true)
+            arc.lineWidth = 2.2
+            arc.lineCapStyle = .round
+            Heat.band(value).color.setStroke()
+            arc.stroke()
             return
         }
         let fraction = max(0.04, min(1, value / 100))

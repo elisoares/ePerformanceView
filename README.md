@@ -11,7 +11,7 @@ Também identifica apps parados que podem ser fechados para liberar memória e d
 ![barra de menus, tema escuro](docs/menubar-dark.png)
 ![barra de menus, tema claro](docs/menubar-light.png)
 
-Ventoinha, CPU e memória com anéis verde/amarelo/vermelho, e a temperatura num anel de frio a calor (azul → verde → amarelo → vermelho). Ao lado, a internet: **↓ download** e **↑ upload** agora (Mbps) e, à direita, a velocidade do último teste. O círculo com número aparece quando há app sugerido para fechar.
+Ventoinha, CPU e memória com anéis verde/amarelo/vermelho, e a temperatura num anel que fica azul (fria), verde (normal), amarelo (morna) ou vermelho (quente). Ao lado, a internet: **↓ download** e **↑ upload** agora (Mbps) e, à direita, a velocidade do último teste. O círculo com número aparece quando há app sugerido para fechar.
 
 ## Widget na área de trabalho
 
